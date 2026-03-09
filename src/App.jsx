@@ -418,19 +418,27 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
 };
 
 export default function App() {
-  const { data, addProduct, updateProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
+  const { data, loading, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
   const [activeTab, setActiveTab] = useState('inventory'); // inventory, add, pending, report, styles
   const [editingProduct, setEditingProduct] = useState(null);
   const [saleProduct, setSaleProduct] = useState(null);
   const [clientName, setClientName] = useState('');
 
-  // Initial Styles Setup
+  // Initial Styles Setup (One-time)
   React.useEffect(() => {
-    if (data.user && (!data.styles || data.styles.length === 0)) {
+    if (data.user && !loading && (!data.styles || data.styles.length === 0)) {
       const initial = ['Vestido Longo', 'Cropped', 'Shorts', 'Vestido Curto'];
       initial.forEach(name => addStyle(name));
     }
-  }, [data.user]);
+  }, [data.user, loading]);
+
+  if (loading && data.user) {
+    return (
+      <div className="container" style={{ justifyContent: 'center', textAlign: 'center' }}>
+        <p style={{ color: 'var(--primary)' }}>Sincronizando estoque...</p>
+      </div>
+    );
+  }
 
   if (!data.user) {
     return <LoginScreen onLogin={login} />;

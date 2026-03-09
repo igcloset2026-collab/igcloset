@@ -1,47 +1,82 @@
 import { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import {
+    collection,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+    onSnapshot,
+    setDoc
+} from "firebase/firestore";
 
 const INITIAL_DATA = {
     products: [],
     salesInProgress: [],
     completedSales: [],
+    styles: [],
     user: null
 };
 
 export function useStorage() {
-    const [data, setData] = useState(() => {
-        const saved = localStorage.getItem('igcloset_data');
-        return saved ? JSON.parse(saved) : INITIAL_DATA;
-    });
+    const [data, setData] = useState(INITIAL_DATA);
+    const [loading, setLoading] = useState(true);
 
+    // Persist user locally (Login is per device)
     useEffect(() => {
-        localStorage.setItem('igcloset_data', JSON.stringify(data));
-    }, [data]);
+        const savedUser = localStorage.getItem('igcloset_user');
+        if (savedUser) {
+            setData(prev => ({ ...prev, user: JSON.parse(savedUser) }));
+        }
+    }, []);
 
-    const addProduct = (product) => {
-        setData(prev => ({
-            ...prev,
-            products: [...prev.products, { ...product, id: Date.now().toString() }]
-        }));
+    // Firestore Listeners
+    useEffect(() => {
+        const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
+            const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(prev => ({ ...prev, products }));
+        });
+
+        const unsubInProgress = onSnapshot(collection(db, "salesInProgress"), (snapshot) => {
+            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(prev => ({ ...prev, salesInProgress: sales }));
+        });
+
+        const unsubCompleted = onSnapshot(collection(db, "completedSales"), (snapshot) => {
+            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(prev => ({ ...prev, completedSales: sales }));
+        });
+
+        const unsubStyles = onSnapshot(collection(db, "styles"), (snapshot) => {
+            const styles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(prev => ({ ...prev, styles }));
+        });
+
+        setLoading(false);
+
+        return () => {
+            unsubProducts();
+            unsubInProgress();
+            unsubCompleted();
+            unsubStyles();
+        };
+    }, []);
+
+    const addProduct = async (product) => {
+        await addDoc(collection(db, "products"), product);
     };
 
-    const updateProduct = (id, updatedProduct) => {
-        setData(prev => ({
-            ...prev,
-            products: prev.products.map(p => p.id === id ? { ...updatedProduct, id } : p)
-        }));
+    const updateProduct = async (id, updatedProduct) => {
+        await updateDoc(doc(db, "products", id), updatedProduct);
     };
 
-    const deleteProduct = (id) => {
-        setData(prev => ({
-            ...prev,
-            products: prev.products.filter(p => p.id !== id)
-        }));
+    const deleteProduct = async (id) => {
+        await deleteDoc(doc(db, "products", id));
     };
 
-    const startSale = (product, clientName) => {
+    const startSale = async (product, clientName) => {
         const sale = {
-            id: Date.now().toString(),
-            product: { ...product }, // Keep the full product for returning to stock if canceled
+            product: { ...product },
             productId: product.id,
             productName: product.description,
             cost: product.cost,
@@ -50,55 +85,38 @@ export function useStorage() {
             status: 'pending',
             timestamp: new Date().toISOString()
         };
-        setData(prev => ({
-            ...prev,
-            salesInProgress: [...prev.salesInProgress, sale],
-            products: prev.products.filter(p => p.id !== product.id) // Remove from stock IMMEDIATELY
-        }));
+
+        // Use a batch or sequential calls
+        await addDoc(collection(db, "salesInProgress"), sale);
+        await deleteDoc(doc(db, "products", product.id));
     };
 
-    const cancelSale = (saleId) => {
+    const cancelSale = async (saleId) => {
         const sale = data.salesInProgress.find(s => s.id === saleId);
         if (!sale) return;
 
-        setData(prev => ({
-            ...prev,
-            salesInProgress: prev.salesInProgress.filter(s => s.id !== saleId),
-            products: [...prev.products, sale.product] // Return to stock
-        }));
+        await setDoc(doc(db, "products", sale.productId), sale.product);
+        await deleteDoc(doc(db, "salesInProgress", saleId));
     };
 
-    const confirmSale = (saleId) => {
+    const confirmSale = async (saleId) => {
         const sale = data.salesInProgress.find(s => s.id === saleId);
         if (!sale) return;
 
-        setData(prev => ({
-            ...prev,
-            salesInProgress: prev.salesInProgress.filter(s => s.id !== saleId),
-            completedSales: [...prev.completedSales, { ...sale, status: 'completed' }]
-            // Item is already removed from products in startSale
-        }));
+        await addDoc(collection(db, "completedSales"), { ...sale, status: 'completed' });
+        await deleteDoc(doc(db, "salesInProgress", saleId));
     };
 
-    const deleteSale = (saleId) => {
-        setData(prev => ({
-            ...prev,
-            completedSales: prev.completedSales.filter(s => s.id !== saleId)
-        }));
+    const deleteSale = async (saleId) => {
+        await deleteDoc(doc(db, "completedSales", saleId));
     };
 
-    const addStyle = (name) => {
-        setData(prev => ({
-            ...prev,
-            styles: [...(prev.styles || []), { id: Date.now().toString(), name }]
-        }));
+    const addStyle = async (name) => {
+        await addDoc(collection(db, "styles"), { name });
     };
 
-    const deleteStyle = (id) => {
-        setData(prev => ({
-            ...prev,
-            styles: (prev.styles || []).filter(s => s.id !== id)
-        }));
+    const deleteStyle = async (id) => {
+        await deleteDoc(doc(db, "styles", id));
     };
 
     const login = (username, password) => {
@@ -108,21 +126,25 @@ export function useStorage() {
             { username: 'fatima', password: 'Fortaleza100' }
         ];
 
-        const user = users.find(u => u.username === username.toLowerCase() && u.password === password);
+        const userFound = users.find(u => u.username === username.toLowerCase() && u.password === password);
 
-        if (user) {
-            setData(prev => ({ ...prev, user: { username: user.username } }));
+        if (userFound) {
+            const userState = { username: userFound.username };
+            localStorage.setItem('igcloset_user', JSON.stringify(userState));
+            setData(prev => ({ ...prev, user: userState }));
             return true;
         }
         return false;
     };
 
     const logout = () => {
+        localStorage.removeItem('igcloset_user');
         setData(prev => ({ ...prev, user: null }));
     };
 
     return {
         data,
+        loading,
         addProduct,
         updateProduct,
         deleteProduct,
