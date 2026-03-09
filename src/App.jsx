@@ -16,7 +16,10 @@ import {
   Settings,
   Filter,
   Calendar,
-  Layers
+  Layers,
+  Tag,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 
 // --- Sub-components ---
@@ -418,7 +421,7 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
 };
 
 export default function App() {
-  const { data, loading, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
+  const { data, loading, connected, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
   const [activeTab, setActiveTab] = useState('inventory'); // inventory, add, pending, report, styles
   const [editingProduct, setEditingProduct] = useState(null);
   const [saleProduct, setSaleProduct] = useState(null);
@@ -434,8 +437,38 @@ export default function App() {
 
   if (loading && data.user) {
     return (
-      <div className="container" style={{ justifyContent: 'center', textAlign: 'center' }}>
-        <p style={{ color: 'var(--primary)' }}>Sincronizando estoque...</p>
+      <div className="container" style={{ justifyContent: 'center', textAlign: 'center', padding: '40px' }}>
+        {/* Header with Sync Status */}
+        <div className="card" style={{
+          margin: '10px',
+          padding: '10px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'white',
+          borderRadius: '15px'
+        }}>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {connected ? (
+              <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
+                <Cloud size={16} style={{ marginRight: '4px' }} /> Conectado
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '12px' }}>
+                <CloudOff size={16} style={{ marginRight: '4px' }} /> Off-line
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="content">
+          <div className="card" style={{ padding: '40px' }}>
+            <Cloud className="spin" size={48} color="var(--primary)" style={{ marginBottom: '20px' }} />
+            <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Sincronizando com a Nuvem...</p>
+            <p style={{ fontSize: '14px', color: '#666' }}>Aguarde um momento enquanto conectamos seu estoque.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -474,6 +507,30 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '60px' }}>
+      {/* Header with Sync Status */}
+      <div className="card" style={{
+        margin: '10px',
+        padding: '10px 20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: 'white',
+        borderRadius: '15px'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {connected ? (
+            <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
+              <Cloud size={16} style={{ marginRight: '4px' }} /> Conectado
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '12px' }}>
+              <CloudOff size={16} style={{ marginRight: '4px' }} /> Sincronizando...
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Modals / Overlays */}
       {saleProduct && (
         <div className="modal-overlay">

@@ -22,6 +22,7 @@ const INITIAL_DATA = {
 export function useStorage() {
     const [data, setData] = useState(INITIAL_DATA);
     const [loading, setLoading] = useState(true);
+    const [connected, setConnected] = useState(false);
 
     // Initial Load and Setup
     useEffect(() => {
@@ -35,11 +36,11 @@ export function useStorage() {
         const migrateLocalData = async () => {
             const localDataRaw = localStorage.getItem('igcloset_data');
             if (localDataRaw) {
-                console.log("Detectados dados locais. Iniciando migração para a nuvem...");
+                console.warn("MIGRAÇÃO: Detectados dados locais. Iniciando envio para nuvem...");
                 try {
                     const localData = JSON.parse(localDataRaw);
 
-                    // Migrate Styles first to avoid duplicates if possible
+                    // Migrate Styles
                     if (localData.styles?.length > 0) {
                         for (const style of localData.styles) {
                             await addDoc(collection(db, "styles"), { name: style.name });
@@ -67,40 +68,63 @@ export function useStorage() {
                         }
                     }
 
-                    // Clean up local after success
                     localStorage.removeItem('igcloset_data');
-                    console.log("Migração concluída com sucesso!");
+                    console.warn("MIGRAÇÃO: Concluída com sucesso!");
                 } catch (e) {
-                    console.error("Falha na migração:", e);
+                    console.error("MIGRAÇÃO: Falha!", e);
                 }
             }
         };
 
-        // 3. Setup Listeners
+        // 3. Setup Listeners with Readiness Check
+        let listenersLoaded = { products: false, sales: false, styles: false, completed: false };
+        const checkReady = () => {
+            if (Object.values(listenersLoaded).every(v => v === true)) {
+                setLoading(false);
+                setConnected(true);
+            }
+        };
+
         const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
             const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, products }));
-            setLoading(false); // First snapshot is enough to stop loading
+            listenersLoaded.products = true;
+            checkReady();
+        }, (err) => {
+            console.error("Erro no Firestore (Produtos):", err);
+            setConnected(false);
         });
 
         const unsubInProgress = onSnapshot(collection(db, "salesInProgress"), (snapshot) => {
             const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, salesInProgress: sales }));
+            listenersLoaded.sales = true;
+            checkReady();
         });
 
         const unsubCompleted = onSnapshot(collection(db, "completedSales"), (snapshot) => {
             const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, completedSales: sales }));
+            listenersLoaded.completed = true;
+            checkReady();
         });
 
         const unsubStyles = onSnapshot(collection(db, "styles"), (snapshot) => {
             const styles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, styles }));
+            listenersLoaded.styles = true;
+            checkReady();
         });
 
         migrateLocalData();
 
+        // Safety timeout for loading
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 3000);
+
         return () => {
+            clearTimeout(timeout);
             unsubProducts();
             unsubInProgress();
             unsubCompleted();
@@ -191,6 +215,7 @@ export function useStorage() {
     return {
         data,
         loading,
+        connected,
         addProduct,
         updateProduct,
         deleteProduct,
