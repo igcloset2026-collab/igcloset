@@ -35,8 +35,16 @@ export function useStorage() {
         const migrateLocalData = async () => {
             const localDataRaw = localStorage.getItem('igcloset_data');
             if (localDataRaw) {
+                console.log("Detectados dados locais. Iniciando migração para a nuvem...");
                 try {
                     const localData = JSON.parse(localDataRaw);
+
+                    // Migrate Styles first to avoid duplicates if possible
+                    if (localData.styles?.length > 0) {
+                        for (const style of localData.styles) {
+                            await addDoc(collection(db, "styles"), { name: style.name });
+                        }
+                    }
 
                     // Migrate Products
                     if (localData.products?.length > 0) {
@@ -59,27 +67,20 @@ export function useStorage() {
                         }
                     }
 
-                    // Migrate Styles
-                    if (localData.styles?.length > 0) {
-                        for (const style of localData.styles) {
-                            await addDoc(collection(db, "styles"), { ...style });
-                        }
-                    }
-
                     // Clean up local after success
                     localStorage.removeItem('igcloset_data');
+                    console.log("Migração concluída com sucesso!");
                 } catch (e) {
-                    console.error("Migration failed:", e);
+                    console.error("Falha na migração:", e);
                 }
             }
         };
-
-        migrateLocalData();
 
         // 3. Setup Listeners
         const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
             const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, products }));
+            setLoading(false); // First snapshot is enough to stop loading
         });
 
         const unsubInProgress = onSnapshot(collection(db, "salesInProgress"), (snapshot) => {
@@ -97,9 +98,7 @@ export function useStorage() {
             setData(prev => ({ ...prev, styles }));
         });
 
-        // Set loading to false after enough time for listeners to initialize
-        // Firestore onSnapshot triggers once per setup with current state
-        setTimeout(() => setLoading(false), 800);
+        migrateLocalData();
 
         return () => {
             unsubProducts();
