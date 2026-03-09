@@ -1,4 +1,4 @@
-// Version: 2.1 (Force Refresh)
+// Version: 2.3 (Real-Time Sync Fix)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {

@@ -7,7 +7,8 @@ import {
     deleteDoc,
     doc,
     onSnapshot,
-    setDoc
+    setDoc,
+    getDocs
 } from "firebase/firestore";
 
 const INITIAL_DATA = {
@@ -22,16 +23,60 @@ export function useStorage() {
     const [data, setData] = useState(INITIAL_DATA);
     const [loading, setLoading] = useState(true);
 
-    // Persist user locally (Login is per device)
+    // Initial Load and Setup
     useEffect(() => {
+        // 1. Recover User (Login is local)
         const savedUser = localStorage.getItem('igcloset_user');
         if (savedUser) {
             setData(prev => ({ ...prev, user: JSON.parse(savedUser) }));
         }
-    }, []);
 
-    // Firestore Listeners
-    useEffect(() => {
+        // 2. Migration Bridge (Check for old local data)
+        const migrateLocalData = async () => {
+            const localDataRaw = localStorage.getItem('igcloset_data');
+            if (localDataRaw) {
+                try {
+                    const localData = JSON.parse(localDataRaw);
+
+                    // Migrate Products
+                    if (localData.products?.length > 0) {
+                        for (const p of localData.products) {
+                            await addDoc(collection(db, "products"), { ...p });
+                        }
+                    }
+
+                    // Migrate Sales In Progress
+                    if (localData.salesInProgress?.length > 0) {
+                        for (const s of localData.salesInProgress) {
+                            await addDoc(collection(db, "salesInProgress"), { ...s });
+                        }
+                    }
+
+                    // Migrate Completed Sales
+                    if (localData.completedSales?.length > 0) {
+                        for (const cs of localData.completedSales) {
+                            await addDoc(collection(db, "completedSales"), { ...cs });
+                        }
+                    }
+
+                    // Migrate Styles
+                    if (localData.styles?.length > 0) {
+                        for (const style of localData.styles) {
+                            await addDoc(collection(db, "styles"), { ...style });
+                        }
+                    }
+
+                    // Clean up local after success
+                    localStorage.removeItem('igcloset_data');
+                } catch (e) {
+                    console.error("Migration failed:", e);
+                }
+            }
+        };
+
+        migrateLocalData();
+
+        // 3. Setup Listeners
         const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
             const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, products }));
@@ -52,7 +97,9 @@ export function useStorage() {
             setData(prev => ({ ...prev, styles }));
         });
 
-        setLoading(false);
+        // Set loading to false after enough time for listeners to initialize
+        // Firestore onSnapshot triggers once per setup with current state
+        setTimeout(() => setLoading(false), 800);
 
         return () => {
             unsubProducts();
@@ -87,8 +134,8 @@ export function useStorage() {
         };
 
         // Use a batch or sequential calls
-        await addDoc(collection(db, "salesInProgress"), sale);
         await deleteDoc(doc(db, "products", product.id));
+        await addDoc(collection(db, "salesInProgress"), sale);
     };
 
     const cancelSale = async (saleId) => {
