@@ -23,6 +23,7 @@ export function useStorage() {
     const [data, setData] = useState(INITIAL_DATA);
     const [loading, setLoading] = useState(true);
     const [connected, setConnected] = useState(false);
+    const [syncError, setSyncError] = useState(null);
 
     // Initial Load and Setup
     useEffect(() => {
@@ -72,6 +73,7 @@ export function useStorage() {
                     console.warn("MIGRAÇÃO: Concluída com sucesso!");
                 } catch (e) {
                     console.error("MIGRAÇÃO: Falha!", e);
+                    setSyncError("Falha ao migrar dados locais: " + e.message);
                 }
             }
         };
@@ -92,6 +94,7 @@ export function useStorage() {
             checkReady();
         }, (err) => {
             console.error("Erro no Firestore (Produtos):", err);
+            setSyncError("Erro de conexão (Produtos): " + err.message);
             setConnected(false);
         });
 
@@ -100,6 +103,8 @@ export function useStorage() {
             setData(prev => ({ ...prev, salesInProgress: sales }));
             listenersLoaded.sales = true;
             checkReady();
+        }, (err) => {
+            setSyncError("Erro de conexão (Vendas em Aberto): " + err.message);
         });
 
         const unsubCompleted = onSnapshot(collection(db, "completedSales"), (snapshot) => {
@@ -107,6 +112,8 @@ export function useStorage() {
             setData(prev => ({ ...prev, completedSales: sales }));
             listenersLoaded.completed = true;
             checkReady();
+        }, (err) => {
+            setSyncError("Erro de conexão (Vendas): " + err.message);
         });
 
         const unsubStyles = onSnapshot(collection(db, "styles"), (snapshot) => {
@@ -114,6 +121,8 @@ export function useStorage() {
             setData(prev => ({ ...prev, styles }));
             listenersLoaded.styles = true;
             checkReady();
+        }, (err) => {
+            setSyncError("Erro de conexão (Estilos): " + err.message);
         });
 
         migrateLocalData();
@@ -121,7 +130,7 @@ export function useStorage() {
         // Safety timeout for loading
         const timeout = setTimeout(() => {
             setLoading(false);
-        }, 3000);
+        }, 5000);
 
         return () => {
             clearTimeout(timeout);

@@ -1,4 +1,4 @@
-// Version: 2.4 (Explicit Migration & Sync Fix)
+// Version: 2.6 (Sync Error Detection & Recovery)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -421,7 +421,7 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
 };
 
 export default function App() {
-  const { data, loading, connected, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
+  const { data, loading, connected, syncError, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
   const [activeTab, setActiveTab] = useState('inventory'); // inventory, add, pending, report, styles
   const [editingProduct, setEditingProduct] = useState(null);
   const [saleProduct, setSaleProduct] = useState(null);
@@ -437,37 +437,16 @@ export default function App() {
 
   if (loading && data.user) {
     return (
-      <div className="container" style={{ justifyContent: 'center', textAlign: 'center', padding: '40px' }}>
-        {/* Header with Sync Status */}
-        <div className="card" style={{
-          margin: '10px',
-          padding: '10px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'white',
-          borderRadius: '15px'
-        }}>
-          <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {connected ? (
-              <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
-                <Cloud size={16} style={{ marginRight: '4px' }} /> Conectado
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '12px' }}>
-                <CloudOff size={16} style={{ marginRight: '4px' }} /> Off-line
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="content">
-          <div className="card" style={{ padding: '40px' }}>
-            <Cloud className="spin" size={48} color="var(--primary)" style={{ marginBottom: '20px' }} />
-            <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Sincronizando com a Nuvem...</p>
-            <p style={{ fontSize: '14px', color: '#666' }}>Aguarde um momento enquanto conectamos seu estoque.</p>
-          </div>
+      <div className="container" style={{ justifyContent: 'center', textAlign: 'center', padding: '20px' }}>
+        <div className="card" style={{ padding: '40px', marginTop: '40px' }}>
+          <Cloud className="spin" size={48} color="var(--primary)" style={{ marginBottom: '20px' }} />
+          <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Sincronizando com a Nuvem...</p>
+          <p style={{ fontSize: '14px', color: '#666' }}>Aguarde 5 segundos enquanto conectamos seu estoque.</p>
+          {syncError && (
+            <div style={{ marginTop: '20px', padding: '10px', background: '#ffebee', color: '#c62828', fontSize: '12px', borderRadius: '8px' }}>
+              <strong>Atenção:</strong> {syncError}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -519,17 +498,27 @@ export default function App() {
       }}>
         <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {connected ? (
+          {syncError ? (
+            <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '11px', maxWidth: '150px' }}>
+              <CloudOff size={16} style={{ marginRight: '4px' }} /> Erro de Sincronia
+            </div>
+          ) : connected ? (
             <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
               <Cloud size={16} style={{ marginRight: '4px' }} /> Conectado
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '12px' }}>
-              <CloudOff size={16} style={{ marginRight: '4px' }} /> Sincronizando...
+            <div style={{ display: 'flex', alignItems: 'center', color: '#ff9800', fontSize: '12px' }}>
+              <Cloud size={16} className="spin" style={{ marginRight: '4px' }} /> Conectando...
             </div>
           )}
         </div>
       </div>
+
+      {syncError && (
+        <div style={{ margin: '0 10px 10px', padding: '10px', background: '#ffebee', color: '#c62828', fontSize: '11px', borderRadius: '10px', textAlign: 'center' }}>
+          {syncError} - Tente atualizar a página (F5).
+        </div>
+      )}
 
       {/* Modals / Overlays */}
       {saleProduct && (
