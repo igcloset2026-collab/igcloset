@@ -1,4 +1,4 @@
-// Version: 2.8 (Image Compression & Robust Sync)
+// Version: 2.9 (Product Deletion in Form)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -176,6 +176,12 @@ const ProductForm = ({ onSave, onCancel, editingProduct, styles }) => {
     });
   };
 
+  const handleDelete = () => {
+    if (window.confirm(`Tem certeza que deseja excluir "${description}" permanentemente?`)) {
+      onSave(null, true); // Signal deletion
+    }
+  };
+
   return (
     <div className="container">
       <h2 style={{ marginBottom: '20px', color: 'var(--primary)' }}>
@@ -239,9 +245,19 @@ const ProductForm = ({ onSave, onCancel, editingProduct, styles }) => {
             />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button type="button" onClick={onCancel} className="btn btn-outline" style={{ flex: 1 }}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Salvar</button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          <button type="button" onClick={onCancel} className="btn btn-outline" style={{ flex: 1, minWidth: '100px' }}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" style={{ flex: 1, minWidth: '100px' }}>Salvar</button>
+          {editingProduct && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="btn"
+              style={{ width: '100%', marginTop: '8px', backgroundColor: '#fff', color: 'var(--error)', border: '1px solid var(--error)' }}
+            >
+              <Trash2 size={18} style={{ marginRight: '8px' }} /> Excluir Peça
+            </button>
+          )}
         </div>
       </form>
     </div>
@@ -495,8 +511,10 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  const handleSaveProduct = (productData) => {
-    if (editingProduct) {
+  const handleSaveProduct = (productData, isDelete = false) => {
+    if (isDelete && editingProduct) {
+      deleteProduct(editingProduct.id);
+    } else if (editingProduct) {
       updateProduct(editingProduct.id, productData);
     } else {
       addProduct(productData);
