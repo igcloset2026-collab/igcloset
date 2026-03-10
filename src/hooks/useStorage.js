@@ -99,7 +99,10 @@ export function useStorage() {
         };
 
         const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
-            const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const products = snapshot.docs.map(doc => {
+                const { id, ...data } = doc.data();
+                return { ...data, id: doc.id };
+            });
             setData(prev => ({ ...prev, products }));
             listenersLoaded.products = true;
             const source = snapshot.metadata.hasPendingWrites ? "Local (Aguardando Nuvem)" : "Servidor";
@@ -113,7 +116,10 @@ export function useStorage() {
         });
 
         const unsubInProgress = onSnapshot(collection(db, "salesInProgress"), (snapshot) => {
-            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const sales = snapshot.docs.map(doc => {
+                const { id, ...data } = doc.data();
+                return { ...data, id: doc.id };
+            });
             setData(prev => ({ ...prev, salesInProgress: sales }));
             listenersLoaded.sales = true;
             addLog(`Vendas em aberto: ${sales.length} registros.`);
@@ -124,7 +130,10 @@ export function useStorage() {
         });
 
         const unsubCompleted = onSnapshot(collection(db, "completedSales"), (snapshot) => {
-            const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const sales = snapshot.docs.map(doc => {
+                const { id, ...data } = doc.data();
+                return { ...data, id: doc.id };
+            });
             setData(prev => ({ ...prev, completedSales: sales }));
             listenersLoaded.completed = true;
             checkReady();
@@ -133,7 +142,10 @@ export function useStorage() {
         });
 
         const unsubStyles = onSnapshot(collection(db, "styles"), (snapshot) => {
-            const styles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const styles = snapshot.docs.map(doc => {
+                const { id, ...data } = doc.data();
+                return { ...data, id: doc.id };
+            });
             setData(prev => ({ ...prev, styles }));
             listenersLoaded.styles = true;
             checkReady();
@@ -225,7 +237,9 @@ export function useStorage() {
             const sale = data.salesInProgress.find(s => s.id === saleId);
             if (!sale) return;
 
-            await addDoc(collection(db, "completedSales"), { ...sale, status: 'completed' });
+            // Strip ID before saving to historical records
+            const { id, ...saleData } = sale;
+            await addDoc(collection(db, "completedSales"), { ...saleData, status: 'completed' });
             await deleteDoc(doc(db, "salesInProgress", saleId));
             addLog("Venda concluída com sucesso!");
         } catch (e) {
@@ -235,10 +249,11 @@ export function useStorage() {
 
     const deleteSale = async (saleId) => {
         try {
+            addLog(`Excluindo venda: ${saleId.substring(0, 5)}...`);
             await deleteDoc(doc(db, "completedSales", saleId));
-            addLog("Venda removida do histórico.");
+            addLog("Venda removida.");
         } catch (e) {
-            addLog(`ERRO ao remover venda: ${e.message}`);
+            addLog(`ERRO ao remover: ${e.message}`);
         }
     };
 

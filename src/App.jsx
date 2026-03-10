@@ -365,7 +365,7 @@ const SalesPendingScreen = ({ sales, onCancel, onConfirm }) => {
   );
 };
 
-const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
+const SalesReportScreen = ({ salesHistory, styles }) => {
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
   const [filterStyle, setFilterStyle] = useState('');
@@ -447,14 +447,9 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
               <strong>{sale.productName}</strong>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>+R$ {sale.price.toFixed(2)}</span>
-                <button
-                  onClick={() => window.confirm('Deseja excluir esta venda do histórico?') && onDelete(sale.id)}
-                  style={{ color: 'var(--error)', padding: '4px' }}
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '12px' }}>
               <span>Cli: {sale.clientName} ({sale.product?.styleName || 'Sem estilo'})</span>
               <span>Lucro: R$ {(sale.price - (sale.cost || 0)).toFixed(2)}</span>
@@ -738,7 +733,7 @@ export default function App() {
           boxShadow: 'inset 0 0 10px rgba(0,255,0,0.2)'
         }}>
           <div style={{ borderBottom: '1px solid #0f0', paddingBottom: '5px', marginBottom: '5px', fontWeight: 'bold' }}>
-            DEBUG LOGS (V2.7) - Toque no título para fechar
+            DEBUG LOGS (V2.8) - Toque no título para fechar
           </div>
           {logs.map((log, i) => (
             <div key={i} style={{ marginBottom: '2px' }}>{log}</div>
@@ -803,7 +798,7 @@ export default function App() {
       )}
 
       {activeTab === 'report' && (
-        <SalesReportScreen salesHistory={data.completedSales} styles={data.styles || []} onDelete={deleteSale} />
+        <SalesReportScreen salesHistory={data.completedSales} styles={data.styles || []} />
       )}
 
       {activeTab === 'styles' && (
