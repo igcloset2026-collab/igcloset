@@ -1,4 +1,4 @@
-// Version: 2.6 (Sync Error Detection & Recovery)
+// Version: 2.7 (Sync Debug Monitor)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -421,11 +421,12 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
 };
 
 export default function App() {
-  const { data, loading, connected, syncError, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
+  const { data, loading, connected, syncError, logs, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
   const [activeTab, setActiveTab] = useState('inventory'); // inventory, add, pending, report, styles
   const [editingProduct, setEditingProduct] = useState(null);
   const [saleProduct, setSaleProduct] = useState(null);
   const [clientName, setClientName] = useState('');
+  const [showDebug, setShowDebug] = useState(false);
 
   // Initial Styles Setup (One-time)
   React.useEffect(() => {
@@ -487,32 +488,58 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '60px' }}>
       {/* Header with Sync Status */}
-      <div className="card" style={{
-        margin: '10px',
-        padding: '10px 20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        background: 'white',
-        borderRadius: '15px'
-      }}>
+      <div className="card"
+        onClick={() => setShowDebug(!showDebug)}
+        style={{
+          margin: '10px',
+          padding: '10px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'white',
+          borderRadius: '15px',
+          cursor: 'pointer'
+        }}>
         <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {syncError ? (
             <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '11px', maxWidth: '150px' }}>
-              <CloudOff size={16} style={{ marginRight: '4px' }} /> Erro de Sincronia
+              <CloudOff size={16} style={{ marginRight: '4px' }} /> Erro
             </div>
           ) : connected ? (
             <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
-              <Cloud size={16} style={{ marginRight: '4px' }} /> Conectado
+              <Cloud size={16} style={{ marginRight: '4px' }} /> On-line
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', color: '#ff9800', fontSize: '12px' }}>
-              <Cloud size={16} className="spin" style={{ marginRight: '4px' }} /> Conectando...
+              <Cloud size={16} className="spin" style={{ marginRight: '4px' }} /> Sinc...
             </div>
           )}
         </div>
       </div>
+
+      {showDebug && (
+        <div style={{
+          margin: '0 10px 10px',
+          padding: '15px',
+          background: '#000',
+          color: '#0f0',
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          borderRadius: '10px',
+          maxHeight: '150px',
+          overflowY: 'auto',
+          boxShadow: 'inset 0 0 10px rgba(0,255,0,0.2)'
+        }}>
+          <div style={{ borderBottom: '1px solid #0f0', paddingBottom: '5px', marginBottom: '5px', fontWeight: 'bold' }}>
+            DEBUG LOGS (V2.7) - Toque no título para fechar
+          </div>
+          {logs.map((log, i) => (
+            <div key={i} style={{ marginBottom: '2px' }}>{log}</div>
+          ))}
+          {logs.length === 0 && <div>Aguardando logs...</div>}
+        </div>
+      )}
 
       {syncError && (
         <div style={{ margin: '0 10px 10px', padding: '10px', background: '#ffebee', color: '#c62828', fontSize: '11px', borderRadius: '10px', textAlign: 'center' }}>

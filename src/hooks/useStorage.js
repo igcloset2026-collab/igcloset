@@ -24,20 +24,29 @@ export function useStorage() {
     const [loading, setLoading] = useState(true);
     const [connected, setConnected] = useState(false);
     const [syncError, setSyncError] = useState(null);
+    const [logs, setLogs] = useState([]);
+
+    const addLog = (msg) => {
+        const time = new Date().toLocaleTimeString();
+        setLogs(prev => [`[${time}] ${msg}`, ...prev].slice(0, 15));
+    };
 
     // Initial Load and Setup
     useEffect(() => {
+        addLog("Iniciando sistema...");
+
         // 1. Recover User (Login is local)
         const savedUser = localStorage.getItem('igcloset_user');
         if (savedUser) {
             setData(prev => ({ ...prev, user: JSON.parse(savedUser) }));
+            addLog(`Usuário ${JSON.parse(savedUser).username} recuperado localmente.`);
         }
 
         // 2. Migration Bridge (Check for old local data)
         const migrateLocalData = async () => {
             const localDataRaw = localStorage.getItem('igcloset_data');
             if (localDataRaw) {
-                console.warn("MIGRAÇÃO: Detectados dados locais. Iniciando envio para nuvem...");
+                addLog("MIGRAÇÃO: Detectados dados locais. Iniciando envio...");
                 try {
                     const localData = JSON.parse(localDataRaw);
 
@@ -70,10 +79,11 @@ export function useStorage() {
                     }
 
                     localStorage.removeItem('igcloset_data');
-                    console.warn("MIGRAÇÃO: Concluída com sucesso!");
+                    addLog("MIGRAÇÃO: Sucesso. Dados locais removidos.");
                 } catch (e) {
                     console.error("MIGRAÇÃO: Falha!", e);
                     setSyncError("Falha ao migrar dados locais: " + e.message);
+                    addLog(`MIGRAÇÃO: ERRO! ${e.message}`);
                 }
             }
         };
@@ -84,6 +94,7 @@ export function useStorage() {
             if (Object.values(listenersLoaded).every(v => v === true)) {
                 setLoading(false);
                 setConnected(true);
+                addLog("Sistema pronto e conectado!");
             }
         };
 
@@ -91,9 +102,12 @@ export function useStorage() {
             const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, products }));
             listenersLoaded.products = true;
+            const source = snapshot.metadata.hasPendingWrites ? "Local (Aguardando Nuvem)" : "Servidor";
+            const fromCache = snapshot.metadata.fromCache ? "(Cache)" : "";
+            addLog(`Estoque atualizado: ${products.length} itens [Origem: ${source}${fromCache}]`);
             checkReady();
         }, (err) => {
-            console.error("Erro no Firestore (Produtos):", err);
+            addLog(`ERRO (Produtos): ${err.message}`);
             setSyncError("Erro de conexão (Produtos): " + err.message);
             setConnected(false);
         });
@@ -102,8 +116,10 @@ export function useStorage() {
             const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setData(prev => ({ ...prev, salesInProgress: sales }));
             listenersLoaded.sales = true;
+            addLog(`Vendas em aberto: ${sales.length} registros.`);
             checkReady();
         }, (err) => {
+            addLog(`ERRO (Vendas em Aberto): ${err.message}`);
             setSyncError("Erro de conexão (Vendas em Aberto): " + err.message);
         });
 
@@ -226,6 +242,7 @@ export function useStorage() {
         loading,
         connected,
         syncError,
+        logs,
         addProduct,
         updateProduct,
         deleteProduct,
