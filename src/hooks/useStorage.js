@@ -225,6 +225,7 @@ export function useStorage() {
         data,
         loading,
         connected,
+        syncError,
         addProduct,
         updateProduct,
         deleteProduct,
