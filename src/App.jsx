@@ -1,4 +1,4 @@
-// Version: 2.7 (Sync Debug Monitor)
+// Version: 2.8 (Image Compression & Robust Sync)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -121,12 +121,43 @@ const ProductForm = ({ onSave, onCancel, editingProduct, styles }) => {
   const [styleId, setStyleId] = useState(editingProduct?.styleId || '');
   const [image, setImage] = useState(editingProduct?.image || null);
 
-  const handleImageChange = (e) => {
+  const compressImage = (base64Str, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    });
+  };
+
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result);
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result);
+        setImage(compressed);
       };
       reader.readAsDataURL(file);
     }

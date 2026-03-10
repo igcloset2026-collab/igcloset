@@ -158,60 +158,106 @@ export function useStorage() {
     }, []);
 
     const addProduct = async (product) => {
-        await addDoc(collection(db, "products"), product);
+        try {
+            await addDoc(collection(db, "products"), product);
+            addLog("Produto cadastrado com sucesso!");
+        } catch (e) {
+            addLog(`ERRO ao cadastrar: ${e.message}`);
+            throw e;
+        }
     };
 
     const updateProduct = async (id, updatedProduct) => {
-        await updateDoc(doc(db, "products", id), updatedProduct);
+        try {
+            await updateDoc(doc(db, "products", id), updatedProduct);
+            addLog("Produto atualizado com sucesso!");
+        } catch (e) {
+            addLog(`ERRO ao atualizar: ${e.message}`);
+            throw e;
+        }
     };
 
     const deleteProduct = async (id) => {
-        await deleteDoc(doc(db, "products", id));
+        try {
+            await deleteDoc(doc(db, "products", id));
+            addLog("Produto removido.");
+        } catch (e) {
+            addLog(`ERRO ao remover: ${e.message}`);
+        }
     };
 
     const startSale = async (product, clientName) => {
-        const sale = {
-            product: { ...product },
-            productId: product.id,
-            productName: product.description,
-            cost: product.cost,
-            price: product.price,
-            clientName,
-            status: 'pending',
-            timestamp: new Date().toISOString()
-        };
+        try {
+            const sale = {
+                product: { ...product },
+                productId: product.id,
+                productName: product.description,
+                cost: product.cost,
+                price: product.price,
+                clientName,
+                status: 'pending',
+                timestamp: new Date().toISOString()
+            };
 
-        // Use a batch or sequential calls
-        await deleteDoc(doc(db, "products", product.id));
-        await addDoc(collection(db, "salesInProgress"), sale);
+            await deleteDoc(doc(db, "products", product.id));
+            await addDoc(collection(db, "salesInProgress"), sale);
+            addLog(`Venda iniciada para ${clientName}`);
+        } catch (e) {
+            addLog(`ERRO ao iniciar venda: ${e.message}`);
+        }
     };
 
     const cancelSale = async (saleId) => {
-        const sale = data.salesInProgress.find(s => s.id === saleId);
-        if (!sale) return;
+        try {
+            const sale = data.salesInProgress.find(s => s.id === saleId);
+            if (!sale) return;
 
-        await setDoc(doc(db, "products", sale.productId), sale.product);
-        await deleteDoc(doc(db, "salesInProgress", saleId));
+            await setDoc(doc(db, "products", sale.productId), sale.product);
+            await deleteDoc(doc(db, "salesInProgress", saleId));
+            addLog("Venda cancelada. Produto voltou ao estoque.");
+        } catch (e) {
+            addLog(`ERRO ao cancelar venda: ${e.message}`);
+        }
     };
 
     const confirmSale = async (saleId) => {
-        const sale = data.salesInProgress.find(s => s.id === saleId);
-        if (!sale) return;
+        try {
+            const sale = data.salesInProgress.find(s => s.id === saleId);
+            if (!sale) return;
 
-        await addDoc(collection(db, "completedSales"), { ...sale, status: 'completed' });
-        await deleteDoc(doc(db, "salesInProgress", saleId));
+            await addDoc(collection(db, "completedSales"), { ...sale, status: 'completed' });
+            await deleteDoc(doc(db, "salesInProgress", saleId));
+            addLog("Venda concluída com sucesso!");
+        } catch (e) {
+            addLog(`ERRO ao confirmar venda: ${e.message}`);
+        }
     };
 
     const deleteSale = async (saleId) => {
-        await deleteDoc(doc(db, "completedSales", saleId));
+        try {
+            await deleteDoc(doc(db, "completedSales", saleId));
+            addLog("Venda removida do histórico.");
+        } catch (e) {
+            addLog(`ERRO ao remover venda: ${e.message}`);
+        }
     };
 
     const addStyle = async (name) => {
-        await addDoc(collection(db, "styles"), { name });
+        try {
+            await addDoc(collection(db, "styles"), { name });
+            addLog(`Novo estilo: ${name}`);
+        } catch (e) {
+            addLog(`ERRO ao adicionar estilo: ${e.message}`);
+        }
     };
 
     const deleteStyle = async (id) => {
-        await deleteDoc(doc(db, "styles", id));
+        try {
+            await deleteDoc(doc(db, "styles", id));
+            addLog("Estilo removido.");
+        } catch (e) {
+            addLog(`ERRO ao remover estilo: ${e.message}`);
+        }
     };
 
     const login = (username, password) => {
