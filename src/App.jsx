@@ -1,4 +1,4 @@
-// Version: 2.9 (Product Deletion in Form)
+// Version: 3.0 (Public Catalog & Image Zoom)
 import React, { useState } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
@@ -19,7 +19,10 @@ import {
   Layers,
   Tag,
   Cloud,
-  CloudOff
+  CloudOff,
+  Share2,
+  ExternalLink,
+  Maximize2
 } from 'lucide-react';
 
 // --- Sub-components ---
@@ -467,6 +470,138 @@ const SalesReportScreen = ({ salesHistory, styles, onDelete }) => {
   );
 };
 
+const ImageModal = ({ image, onClose }) => {
+  if (!image) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 4000,
+        padding: '10px'
+      }}
+    >
+      <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+        <img
+          src={image}
+          style={{
+            maxWidth: '100vw',
+            maxHeight: '90vh',
+            borderRadius: '10px',
+            display: 'block',
+            boxShadow: '0 0 30px rgba(0,0,0,0.5)'
+          }}
+          alt="Foto ampliada"
+        />
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '-40px',
+            right: '0',
+            background: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+          }}
+        >
+          <X size={20} color="#000" />
+        </button>
+        <p style={{ color: 'white', textAlign: 'center', marginTop: '10px', fontSize: '14px' }}>Toque fora para fechar</p>
+      </div>
+    </div>
+  );
+};
+
+const CatalogScreen = ({ products, onImageClick }) => {
+  return (
+    <div className="container" style={{ paddingTop: '20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <div style={{
+          width: '90px',
+          height: '90px',
+          margin: '0 auto 15px',
+          borderRadius: '50%',
+          overflow: 'hidden',
+          boxShadow: '0 4px 15px rgba(142,55,103,0.2)',
+          border: '2px solid white'
+        }}>
+          <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <h1 translate="no" style={{ color: 'var(--primary)', marginBottom: '4px', fontSize: '1.8rem' }}>IG Closet</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase' }}>Catálogo Digital</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
+        {products.map(product => (
+          <div key={product.id} className="card" style={{ padding: '0', overflow: 'hidden', border: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+            <div
+              onClick={() => onImageClick(product.image)}
+              style={{ width: '100%', aspectRatio: '4/5', backgroundColor: '#f0f0f0', cursor: 'pointer', position: 'relative' }}>
+              {product.image ? (
+                <img src={product.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  <Package size={40} color="#ccc" />
+                </div>
+              )}
+              <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '50%' }}>
+                <Maximize2 size={14} color="white" />
+              </div>
+            </div>
+            <div style={{ padding: '12px' }}>
+              <h3 style={{ fontSize: '14px', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }}>
+                {product.description}
+              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '16px' }}>
+                  R$ {product.price.toFixed(2)}
+                </p>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: '#f5f5f5', padding: '2px 6px', borderRadius: '4px' }}>
+                  {product.styleName}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {products.length === 0 && (
+        <div style={{ textAlign: 'center', marginTop: '60px', color: 'var(--text-muted)', padding: '40px' }}>
+          <Package size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+          <p>Nenhuma peça disponível para consulta no momento.</p>
+        </div>
+      )}
+
+      <div style={{
+        marginTop: '60px',
+        textAlign: 'center',
+        padding: '30px 20px',
+        borderTop: '1px solid var(--border)',
+        fontSize: '13px',
+        color: 'var(--text-muted)'
+      }}>
+        <p style={{ marginBottom: '5px' }}>© 2024 IG Closet Fortaleza</p>
+        <p>Acesse nosso Instagram para novidades!</p>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const { data, loading, connected, syncError, logs, addProduct, updateProduct, deleteProduct, startSale, cancelSale, confirmSale, deleteSale, addStyle, deleteStyle, login, logout } = useStorage();
   const [activeTab, setActiveTab] = useState('inventory'); // inventory, add, pending, report, styles
@@ -474,6 +609,10 @@ export default function App() {
   const [saleProduct, setSaleProduct] = useState(null);
   const [clientName, setClientName] = useState('');
   const [showDebug, setShowDebug] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
+
+  // Detect if we are in customer catalog mode based on URL
+  const [isCatalogMode] = useState(window.location.pathname === '/catalogo' || window.location.search.includes('mode=catalog'));
 
   // Initial Styles Setup (One-time)
   React.useEffect(() => {
@@ -482,6 +621,15 @@ export default function App() {
       initial.forEach(name => addStyle(name));
     }
   }, [data.user, loading]);
+
+  if (isCatalogMode) {
+    return (
+      <>
+        <CatalogScreen products={data.products} onImageClick={setFullscreenImage} />
+        <ImageModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
+      </>
+    );
+  }
 
   if (loading && data.user) {
     return (
@@ -536,9 +684,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '60px' }}>
-      {/* Header with Sync Status */}
       <div className="card"
-        onClick={() => setShowDebug(!showDebug)}
         style={{
           margin: '10px',
           padding: '10px 20px',
@@ -546,22 +692,33 @@ export default function App() {
           justifyContent: 'space-between',
           alignItems: 'center',
           background: 'white',
-          borderRadius: '15px',
-          cursor: 'pointer'
+          borderRadius: '15px'
         }}>
-        <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div onClick={() => setShowDebug(!showDebug)} style={{ cursor: 'pointer' }}>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)' }}>IG Closet</h1>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => {
+              const url = window.location.origin + '/catalogo';
+              navigator.clipboard.writeText(url);
+              alert('Link do catálogo copiado! Agora você pode colar no WhatsApp das clientes.');
+            }}
+            style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', background: '#fce4ec', padding: '6px 12px', borderRadius: '10px', border: 'none' }}
+          >
+            <Share2 size={16} /> Catálogo
+          </button>
           {syncError ? (
-            <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '11px', maxWidth: '150px' }}>
-              <CloudOff size={16} style={{ marginRight: '4px' }} /> Erro
+            <div style={{ display: 'flex', alignItems: 'center', color: '#f44336', fontSize: '11px', maxWidth: '80px' }}>
+              <CloudOff size={16} /> Erro
             </div>
           ) : connected ? (
             <div style={{ display: 'flex', alignItems: 'center', color: '#4caf50', fontSize: '12px' }}>
-              <Cloud size={16} style={{ marginRight: '4px' }} /> On-line
+              <Cloud size={16} /> On-line
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', color: '#ff9800', fontSize: '12px' }}>
-              <Cloud size={16} className="spin" style={{ marginRight: '4px' }} /> Sinc...
+              <Cloud size={16} className="spin" /> Sinc...
             </div>
           )}
         </div>
@@ -691,6 +848,7 @@ export default function App() {
           <span>Sair</span>
         </button>
       </nav>
+      <ImageModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
     </div>
   );
 }
