@@ -322,9 +322,20 @@ const InventoryScreen = ({ products, onEdit, onSell }) => {
 };
 
 const SalesPendingScreen = ({ sales, onCancel, onConfirm }) => {
+  const totalPending = sales.reduce((sum, s) => sum + s.price, 0);
+
   return (
     <div className="container">
       <h2 style={{ marginBottom: '20px', color: 'var(--primary)' }}>Vendas em Andamento</h2>
+      
+      {sales.length > 0 && (
+        <div className="card" style={{ padding: '16px', textAlign: 'center', backgroundColor: 'var(--secondary-light)', marginBottom: '20px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>Total a Receber</p>
+          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--primary)' }}>R$ {totalPending.toFixed(2)}</p>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{sales.length} {sales.length === 1 ? 'venda pendente' : 'vendas pendentes'}</p>
+        </div>
+      )}
+
       {sales.length === 0 ? (
         <p style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)' }}>Nenhuma venda pendente.</p>
       ) : (
