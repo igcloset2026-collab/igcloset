@@ -652,11 +652,17 @@ export default function App() {
 
   // Initial Styles Setup (One-time)
   React.useEffect(() => {
-    if (data.user && !loading && (!data.styles || data.styles.length === 0)) {
+    if (data.user && !loading && data.styles) {
       const initial = ['Vestido Longo', 'Cropped', 'Shorts', 'Vestido Curto'];
-      initial.forEach(name => addStyle(name));
+      initial.forEach(name => {
+        const normalizedName = name.trim().toLowerCase();
+        const exists = data.styles.some(s => s.name.trim().toLowerCase() === normalizedName);
+        if (!exists) {
+            addStyle(name);
+        }
+      });
     }
-  }, [data.user, loading]);
+  }, [data.user, loading, data.styles]);
 
   if (isCatalogMode) {
     return (

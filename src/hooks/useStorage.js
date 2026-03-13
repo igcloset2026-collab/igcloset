@@ -259,8 +259,17 @@ export function useStorage() {
 
     const addStyle = async (name) => {
         try {
-            await addDoc(collection(db, "styles"), { name });
-            addLog(`Novo estilo: ${name}`);
+            const normalizedName = name.trim().toLowerCase();
+            const exists = data.styles.some(s => s.name.trim().toLowerCase() === normalizedName);
+            
+            if (exists) {
+                alert(`O estilo "${name}" já existe.`);
+                addLog(`Tentativa de adicionar estilo duplicado: "${name}"`);
+                return;
+            }
+
+            await addDoc(collection(db, "styles"), { name: name.trim() });
+            addLog(`Novo estilo: ${name.trim()}`);
         } catch (e) {
             addLog(`ERRO ao adicionar estilo: ${e.message}`);
         }
