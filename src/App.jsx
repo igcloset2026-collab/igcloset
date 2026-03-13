@@ -267,20 +267,44 @@ const ProductForm = ({ onSave, onCancel, editingProduct, styles }) => {
   );
 };
 
-const InventoryScreen = ({ products, onEdit, onSell }) => {
+const InventoryScreen = ({ products, onEdit, onSell, styles = [] }) => {
+  const [filterStyle, setFilterStyle] = useState('');
+
+  const filteredProducts = products.filter(product => 
+    filterStyle ? product.styleId === filterStyle : true
+  );
+
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: 'var(--primary)' }}>Meu Estoque</h2>
-        <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{products.length} peças</span>
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h2 style={{ color: 'var(--primary)' }}>Meu Estoque</h2>
+          <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{filteredProducts.length} peças</span>
+        </div>
+        
+        {/* Filtro de Estilo */}
+        <div className="card" style={{ padding: '12px', marginBottom: '0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Filter size={18} color="var(--primary)" />
+          <select 
+            value={filterStyle} 
+            onChange={(e) => setFilterStyle(e.target.value)} 
+            style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', outline: 'none' }}
+          >
+            <option value="">Todos os Estilos</option>
+            {styles.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      {products.length === 0 ? (
+
+      {filteredProducts.length === 0 ? (
         <div style={{ textAlign: 'center', marginTop: '40px', color: 'var(--text-muted)' }}>
           <Package size={60} style={{ opacity: 0.2, marginBottom: '16px' }} />
-          <p>Nenhuma peça cadastrada.</p>
+          <p>{filterStyle ? 'Nenhuma peça encontrada para este estilo.' : 'Nenhuma peça cadastrada.'}</p>
         </div>
       ) : (
-        products.map(product => (
+        filteredProducts.map(product => (
           <div key={product.id} className="card" style={{ display: 'flex', gap: '16px', padding: '12px' }}>
             <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#eee', flexShrink: 0 }}>
               {product.image ? (
@@ -794,6 +818,7 @@ export default function App() {
           products={data.products}
           onEdit={(p) => { setEditingProduct(p); setActiveTab('add'); }}
           onSell={handleStartSale}
+          styles={data.styles || []}
         />
       )}
 
