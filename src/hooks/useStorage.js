@@ -141,7 +141,7 @@ export function useStorage() {
             setSyncError("Erro de conexão (Vendas): " + err.message);
         });
 
-        const unsubStyles = onSnapshot(collection(db, "styles"), (snapshot) => {
+        const unsubStyles = onSnapshot(collection(db, "styles"), async (snapshot) => {
             const styles = snapshot.docs.map(doc => {
                 const { id, ...data } = doc.data();
                 return { ...data, id: doc.id };
@@ -149,6 +149,24 @@ export function useStorage() {
             setData(prev => ({ ...prev, styles }));
             listenersLoaded.styles = true;
             checkReady();
+
+            // Run initial styles setup ONLY when snapshot comes back completely empty
+            if (snapshot.docs.length === 0 && !snapshot.metadata.fromCache) {
+                 const initial = ['Vestido Longo', 'Cropped', 'Shorts', 'Vestido Curto'];
+                 for (const name of initial) {
+                    try {
+                        const normalizedName = name.trim().toLowerCase();
+                        // Double check against local state to be absolutely sure
+                        if (!styles.some(s => s.name.trim().toLowerCase() === normalizedName)) {
+                            await addDoc(collection(db, "styles"), { name: name.trim() });
+                            addLog(`Estilo padrão criado: ${name}`);
+                        }
+                    } catch (e) {
+                         addLog(`Erro ao criar estilo padrão: ${e.message}`);
+                    }
+                 }
+            }
+
         }, (err) => {
             setSyncError("Erro de conexão (Estilos): " + err.message);
         });

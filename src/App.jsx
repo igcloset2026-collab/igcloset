@@ -650,20 +650,6 @@ export default function App() {
   // Detect if we are in customer catalog mode based on URL
   const [isCatalogMode] = useState(window.location.pathname === '/catalogo' || window.location.search.includes('mode=catalog'));
 
-  // Initial Styles Setup (One-time)
-  React.useEffect(() => {
-    if (data.user && !loading && data.styles) {
-      const initial = ['Vestido Longo', 'Cropped', 'Shorts', 'Vestido Curto'];
-      initial.forEach(name => {
-        const normalizedName = name.trim().toLowerCase();
-        const exists = data.styles.some(s => s.name.trim().toLowerCase() === normalizedName);
-        if (!exists) {
-            addStyle(name);
-        }
-      });
-    }
-  }, [data.user, loading, data.styles]);
-
   if (isCatalogMode) {
     return (
       <>
