@@ -563,7 +563,13 @@ const ImageModal = ({ image, onClose }) => {
   );
 };
 
-const CatalogScreen = ({ products, onImageClick }) => {
+const CatalogScreen = ({ products, styles = [], onImageClick }) => {
+  const [filterStyle, setFilterStyle] = useState('');
+
+  const filteredProducts = products.filter(product => 
+    filterStyle ? product.styleId === filterStyle : true
+  );
+
   return (
     <div className="container" style={{ paddingTop: '20px' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -582,8 +588,22 @@ const CatalogScreen = ({ products, onImageClick }) => {
         <p style={{ color: 'var(--text-muted)', fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase' }}>Catálogo Digital</p>
       </div>
 
+      <div className="card" style={{ padding: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Filter size={18} color="var(--primary)" />
+        <select 
+          value={filterStyle} 
+          onChange={(e) => setFilterStyle(e.target.value)} 
+          style={{ border: 'none', background: 'transparent', width: '100%', fontSize: '14px', outline: 'none' }}
+        >
+          <option value="">Todos os Estilos</option>
+          {styles.map(s => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
-        {products.map(product => (
+        {filteredProducts.map(product => (
           <div key={product.id} className="card" style={{ padding: '0', overflow: 'hidden', border: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
             <div
               onClick={() => onImageClick(product.image)}
@@ -616,10 +636,10 @@ const CatalogScreen = ({ products, onImageClick }) => {
         ))}
       </div>
 
-      {products.length === 0 && (
+      {filteredProducts.length === 0 && (
         <div style={{ textAlign: 'center', marginTop: '60px', color: 'var(--text-muted)', padding: '40px' }}>
           <Package size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
-          <p>Nenhuma peça disponível para consulta no momento.</p>
+          <p>{filterStyle ? 'Nenhuma peça disponível neste estilo no momento.' : 'Nenhuma peça disponível para consulta no momento.'}</p>
         </div>
       )}
 
@@ -653,7 +673,7 @@ export default function App() {
   if (isCatalogMode) {
     return (
       <>
-        <CatalogScreen products={data.products} onImageClick={setFullscreenImage} />
+        <CatalogScreen products={data.products} styles={data.styles} onImageClick={setFullscreenImage} />
         <ImageModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
       </>
     );
