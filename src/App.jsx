@@ -27,25 +27,70 @@ import {
 
 // --- Sub-components ---
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 5;
+
 const LoginScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Monitorar bloqueio por tentativas excessivas com contagem regressiva
+  useEffect(() => {
+    const checkLockout = () => {
+      const lockUntil = Number(localStorage.getItem('igcloset_lockout_until') || 0);
+      const now = Date.now();
+      if (lockUntil > now) {
+        setLockoutSeconds(Math.ceil((lockUntil - now) / 1000));
+      } else {
+        setLockoutSeconds(0);
+        if (lockUntil > 0) {
+          localStorage.removeItem('igcloset_lockout_until');
+          localStorage.removeItem('igcloset_login_attempts');
+        }
+      }
+    };
+
+    checkLockout();
+    const interval = setInterval(checkLockout, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || lockoutSeconds > 0) return;
     setLoading(true);
     setError('');
 
     const res = await onLogin(username, password);
     if (res === true || res?.success) {
       setError('');
+      localStorage.removeItem('igcloset_login_attempts');
+      localStorage.removeItem('igcloset_lockout_until');
     } else {
-      setError(res?.error || 'Usuário ou senha incorretos.');
+      const currentAttempts = Number(localStorage.getItem('igcloset_login_attempts') || 0) + 1;
+      localStorage.setItem('igcloset_login_attempts', currentAttempts.toString());
+
+      if (currentAttempts >= MAX_ATTEMPTS) {
+        const lockUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
+        localStorage.setItem('igcloset_lockout_until', lockUntil.toString());
+        setLockoutSeconds(LOCKOUT_MINUTES * 60);
+        setError('Acesso bloqueado por segurança devido a 5 tentativas incorretas.');
+      } else {
+        const remaining = MAX_ATTEMPTS - currentAttempts;
+        setError(`${res?.error || 'Usuário ou senha incorretos.'} (${currentAttempts}/${MAX_ATTEMPTS} tentativas - resta ${remaining})`);
+      }
     }
     setLoading(false);
+  };
+
+  const isLocked = lockoutSeconds > 0;
+  const formatTime = (totalSeconds) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -58,14 +103,14 @@ const LoginScreen = ({ onLogin }) => {
         </div>
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Usuário ou E-mail</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Usuário</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Ex: gesiel ou gesiel@igcloset.com"
+              placeholder="Usuário"
               required
-              disabled={loading}
+              disabled={loading || isLocked}
             />
           </div>
           <div style={{ marginBottom: '20px', textAlign: 'left' }}>
@@ -76,12 +121,39 @@ const LoginScreen = ({ onLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha"
               required
-              disabled={loading}
+              disabled={loading || isLocked}
             />
           </div>
-          {error && <p style={{ color: 'var(--error)', fontSize: '14px', marginBottom: '16px' }}>{error}</p>}
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar'}
+
+          {isLocked && (
+            <div style={{
+              background: '#fff2f0',
+              border: '1px solid #ffccc7',
+              color: 'var(--error)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              marginBottom: '16px',
+              textAlign: 'center'
+            }}>
+              🔒 <strong>Acesso bloqueado por segurança</strong>
+              <div style={{ marginTop: '4px' }}>
+                Muitas tentativas incorretas. Tente novamente em <strong>{formatTime(lockoutSeconds)}</strong>.
+              </div>
+            </div>
+          )}
+
+          {!isLocked && error && (
+            <p style={{ color: 'var(--error)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            disabled={loading || isLocked}
+          >
+            {loading ? 'Entrando...' : isLocked ? `Aguarde (${formatTime(lockoutSeconds)})` : 'Entrar'}
           </button>
         </form>
       </div>
