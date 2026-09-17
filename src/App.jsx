@@ -1,5 +1,5 @@
 // Version: 3.0 (Public Catalog & Image Zoom)
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStorage } from './hooks/useStorage';
 import {
   PlusCircle,
