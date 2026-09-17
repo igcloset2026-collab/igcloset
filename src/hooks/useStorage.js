@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
     collection,
     addDoc,
@@ -10,6 +10,11 @@ import {
     setDoc,
     getDocs
 } from "firebase/firestore";
+import {
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "firebase/auth";
 
 const INITIAL_DATA = {
     products: [],
@@ -35,12 +40,21 @@ export function useStorage() {
     useEffect(() => {
         addLog("Iniciando sistema...");
 
-        // 1. Recover User (Login is local)
-        const savedUser = localStorage.getItem('igcloset_user');
-        if (savedUser) {
-            setData(prev => ({ ...prev, user: JSON.parse(savedUser) }));
-            addLog(`Usuário ${JSON.parse(savedUser).username} recuperado localmente.`);
-        }
+        // 1. Ouvinte oficial do Firebase Auth (Sessão Segura)
+        const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                const username = firebaseUser.email?.split('@')[0] || firebaseUser.displayName || 'Admin';
+                const userState = {
+                    username,
+                    email: firebaseUser.email,
+                    uid: firebaseUser.uid
+                };
+                setData(prev => ({ ...prev, user: userState }));
+                addLog(`Sessão ativa: ${username}`);
+            } else {
+                setData(prev => ({ ...prev, user: null }));
+            }
+        });
 
         // 2. Migration Bridge (Check for old local data)
         const migrateLocalData = async () => {
@@ -180,6 +194,7 @@ export function useStorage() {
 
         return () => {
             clearTimeout(timeout);
+            unsubAuth();
             unsubProducts();
             unsubInProgress();
             unsubCompleted();
@@ -302,27 +317,49 @@ export function useStorage() {
         }
     };
 
-    const login = (username, password) => {
-        const users = [
-            { username: 'gesiel', password: 'Rionegro2015' },
-            { username: 'irisgabrielly', password: 'Fortaleza100' },
-            { username: 'fatima', password: 'Fortaleza100' }
-        ];
-
-        const userFound = users.find(u => u.username === username.toLowerCase() && u.password === password);
-
-        if (userFound) {
-            const userState = { username: userFound.username };
-            localStorage.setItem('igcloset_user', JSON.stringify(userState));
+    const login = async (username, password) => {
+        try {
+            const cleanUser = (username || '').trim().toLowerCase();
+            const aliasMap = {
+                'gesiel': 'gesiel.dsn@gmail.com',
+                'iris': 'irissiqueira667@gmail.com',
+                'irisgabrielly': 'irissiqueira667@gmail.com',
+                'fatima': 'igcloset2026@gmail.com',
+                'igcloset': 'igcloset2026@gmail.com'
+            };
+            const email = cleanUser.includes('@') ? cleanUser : (aliasMap[cleanUser] || `${cleanUser}@gmail.com`);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const userState = {
+                username: userCredential.user.email?.split('@')[0] || cleanUser,
+                email: userCredential.user.email,
+                uid: userCredential.user.uid
+            };
             setData(prev => ({ ...prev, user: userState }));
-            return true;
+            addLog(`Login efetuado: ${userState.username}`);
+            return { success: true };
+        } catch (e) {
+            addLog(`Falha no login: ${e.message}`);
+            let errorMsg = 'Usuário ou senha incorretos.';
+            if (e.code === 'auth/network-request-failed') {
+                errorMsg = 'Falha de conexão com a internet. Verifique sua rede.';
+            } else if (e.code === 'auth/too-many-requests') {
+                errorMsg = 'Muitas tentativas sem sucesso. Aguarde alguns instantes.';
+            } else if (e.code === 'auth/operation-not-allowed') {
+                errorMsg = 'O login por E-mail/Senha ainda não foi ativado no Firebase Console.';
+            }
+            return { success: false, error: errorMsg };
         }
-        return false;
     };
 
-    const logout = () => {
-        localStorage.removeItem('igcloset_user');
-        setData(prev => ({ ...prev, user: null }));
+    const logout = async () => {
+        try {
+            await signOut(auth);
+            localStorage.removeItem('igcloset_user');
+            setData(prev => ({ ...prev, user: null }));
+            addLog("Logout efetuado.");
+        } catch (e) {
+            addLog(`ERRO ao deslogar: ${e.message}`);
+        }
     };
 
     return {

@@ -31,14 +31,21 @@ const LoginScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (onLogin(username, password)) {
+    if (loading) return;
+    setLoading(true);
+    setError('');
+
+    const res = await onLogin(username, password);
+    if (res === true || res?.success) {
       setError('');
     } else {
-      setError('Usuário ou senha incorretos.');
+      setError(res?.error || 'Usuário ou senha incorretos.');
     }
+    setLoading(false);
   };
 
   return (
@@ -51,15 +58,31 @@ const LoginScreen = ({ onLogin }) => {
         </div>
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Usuário</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Usuário" required />
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Usuário ou E-mail</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Ex: gesiel ou gesiel@igcloset.com"
+              required
+              disabled={loading}
+            />
           </div>
           <div style={{ marginBottom: '20px', textAlign: 'left' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Senha</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha" required />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Senha"
+              required
+              disabled={loading}
+            />
           </div>
           {error && <p style={{ color: 'var(--error)', fontSize: '14px', marginBottom: '16px' }}>{error}</p>}
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Entrar</button>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
       </div>
     </div>
